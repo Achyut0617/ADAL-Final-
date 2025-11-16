@@ -1,39 +1,45 @@
-def tsp_dp(dist, n):
-    INF = float('inf')
-    dp = [[INF] * n for _ in range(1 << n)]
+from functools import lru_cache
 
-    dp[1][0] = 0  # start at city 0
+# ---------------- TSP with path reconstruction ---------------- #
 
-    for mask in range(1 << n):
-        for u in range(n):
-            if not (mask & (1 << u)):
-                continue  # u not visited
+def solve_tsp(graph):
+    n = len(graph)
+    FULL_MASK = (1 << n) - 1
 
-            for v in range(n):
-                if mask & (1 << v):  
-                    continue  # v already visited
+    @lru_cache(None)
+    def tsp(mask, pos):
+        if mask == FULL_MASK:
+            return graph[pos][0], [0]  # return to start node
 
-                new_mask = mask | (1 << v)
-                dp[new_mask][v] = min(
-                    dp[new_mask][v],
-                    dp[mask][u] + dist[u][v]
-                )
+        best_cost = float('inf')
+        best_path = []
 
-    # return to start city (0)
-    full_mask = (1 << n) - 1
-    ans = min(dp[full_mask][i] + dist[i][0] for i in range(n))
+        for nxt in range(n):
+            if not (mask & (1 << nxt)):      # if nxt not visited
+                cost, path = tsp(mask | (1 << nxt), nxt)
+                new_cost = graph[pos][nxt] + cost
 
-    return ans
+                if new_cost < best_cost:
+                    best_cost = new_cost
+                    best_path = [nxt] + path
+
+        return best_cost, best_path
+
+    cost, path = tsp(1, 0)
+    full_route = [0] + path   # starting point + path
+    return cost, full_route
 
 
-# -------- USER INPUT --------
+# ---------------- USER INPUT ---------------- #
+
 n = int(input("Enter number of attractions: "))
+graph = []
+
 print("Enter travel time matrix:")
-
-dist = []
 for _ in range(n):
-    row = list(map(int, input().split()))
-    dist.append(row)
+    graph.append(list(map(int, input().split())))
 
-result = tsp_dp(dist, n)
-print("\nMinimum Travel Time (Best Circular Route):", result)
+cost, route = solve_tsp(graph)
+
+print("\nShortest Route:", " -> ".join(map(str, route)))
+print("Minimum Travel Time:", cost)
